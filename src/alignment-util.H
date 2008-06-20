@@ -181,4 +181,7 @@ alignment reverse(const alignment& A);
 alignment complement(const alignment& A);
 
 alignment reverse_complement(const alignment& A);
+
+int add_column_type_note(alignment& A);
+
 #endif
