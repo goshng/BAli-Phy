@@ -1185,8 +1185,13 @@ int main(int argc,char* argv[])
     P.recalc_all();
 
     //---------------Do something------------------//
-    if (args.count("show-only"))
+    if (args.count("show-only")) {
+      // FIXME!
+      MCMC::MoveStats S;
+      sample_alignment_rates(P,S);
+
       print_stats(cout,cout,P);
+    }
     else {
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
       raise_cpu_limit(err_both);
@@ -1250,9 +1255,6 @@ int main(int argc,char* argv[])
       cerr.flush() ; cerr.rdbuf(s_err.rdbuf());
       clog.flush() ; clog.rdbuf(s_err.rdbuf());
 
-      // FIXME!
-      MCMC::MoveStats S;
-      sample_alignment_rates(P,S);
       
       //------ Redirect output to files -------//
       owned_ptr<Probability_Model> Ptr(P);
@@ -1269,7 +1271,6 @@ int main(int argc,char* argv[])
       out_screen<<"You can examine 'C1.p' using BAli-Phy tool statreport (command-line)"<<endl;
       out_screen<<"  or the BEAST program Tracer (graphical)."<<endl;
       out_screen<<"See the manual for further information."<<endl;
-
 
       //-------- Start the MCMC  -----------//
       do_sampling(args,Ptr ,max_iterations,files);
