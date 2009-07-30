@@ -113,6 +113,7 @@ public:
   //FIXME - WHy not a cached_value< >?
   //REASON: Dynamic Programming uses this and assumes its always up-to-date.
   std::vector<indel::PairHMM> branch_HMMs;
+  vector<indel::PairTransducer> branch_PTMs;
   std::vector<int> branch_HMM_type;
 
   /// Alignment constraint
