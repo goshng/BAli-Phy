@@ -73,6 +73,8 @@ struct data_partition: public Probability_Model
 
   mutable std::vector<cached_value<ublas::matrix<int> > > cached_alignment_counts_for_branch;
 
+  mutable vector<cached_value<ublas::matrix<int> > > cached_transducer_counts_for_branch;
+
   mutable std::vector<cached_value<int> > cached_sequence_lengths;
 
   double branch_mean_;
@@ -169,6 +171,8 @@ public:
   void note_alignment_changed();
 
   void note_sequence_length_changed(int n);
+
+  void note_column_label_changed();
 
   /// parameter for exponential prior on branch length
   double branch_mean() const; 
