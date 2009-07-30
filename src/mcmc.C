@@ -1188,8 +1188,8 @@ void mcmc_log(int iterations, int subsample, Parameters& P,
 	  for(int c=0;c<A.length();c++)
 	    if (type_note(c,0) == 0)
 	      count_s++;
-	  s_parameters<<"\t"<<count_s;
 	  s_parameters<<"\t"<<A.length() - count_s;
+	  s_parameters<<"\t"<<count_s;
     }
     unsigned x4 = n_mutations(*P[i].A, *P[i].T);
     total_substs += x4;
