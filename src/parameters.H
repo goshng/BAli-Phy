@@ -73,7 +73,7 @@ struct data_partition: public Probability_Model
 
   mutable std::vector<cached_value<ublas::matrix<int> > > cached_alignment_counts_for_branch;
 
-  mutable vector<cached_value<ublas::matrix<int> > > cached_transducer_counts_for_branch;
+  mutable std::vector<cached_value<ublas::matrix<int> > > cached_transducer_counts_for_branch;
 
   mutable std::vector<cached_value<int> > cached_sequence_lengths;
 
@@ -115,7 +115,7 @@ public:
   //FIXME - WHy not a cached_value< >?
   //REASON: Dynamic Programming uses this and assumes its always up-to-date.
   std::vector<indel::PairHMM> branch_HMMs;
-  vector<indel::PairTransducer> branch_PTMs;
+  std::vector<indel::PairTransducer> branch_PTMs;
   std::vector<int> branch_HMM_type;
 
   /// Alignment constraint
@@ -192,7 +192,7 @@ public:
 		 const substitution::MultiModel&);
   data_partition(const std::string& n, const alignment&, const SequenceTree&,
 		 const substitution::MultiModel&, const IndelModel&);
-  data_partition(const string& n, const alignment&, const SequenceTree&,
+  data_partition(const std::string& n, const alignment&, const SequenceTree&,
 		 const substitution::MultiModel&, const TransducerIndelModel&);
 };
 
@@ -208,8 +208,8 @@ class Parameters: public SuperModel, public Probability_Model
   std::vector<int> imodel_for_partition;
 
   /// The IndelModel
-  vector<polymorphic_cow_ptr<TransducerIndelModel> > TIModels;
-  vector<int> timodel_for_partition;
+  std::vector<polymorphic_cow_ptr<TransducerIndelModel> > TIModels;
+  std::vector<int> timodel_for_partition;
 
   // Scale for partition
   std::vector<int> scale_for_partition;
@@ -374,12 +374,12 @@ public:
 	     const std::vector<int>&,
 	     const std::vector<int>&);
 
-  Parameters(const vector<alignment>& A, const SequenceTree&, 
-	     const vector<polymorphic_cow_ptr<substitution::MultiModel> >&,
-	     const vector<int>&,
-	     const vector<polymorphic_cow_ptr<TransducerIndelModel> >&,
-	     const vector<int>&,	
-	     const vector<int>&);
+  Parameters(const std::vector<alignment>& A, const SequenceTree&, 
+	     const std::vector<polymorphic_cow_ptr<substitution::MultiModel> >&,
+	     const std::vector<int>&,
+	     const std::vector<polymorphic_cow_ptr<TransducerIndelModel> >&,
+	     const std::vector<int>&,	
+	     const std::vector<int>&);
 };
 
 bool accept_MH(const Probability_Model& P1,const Probability_Model& P2,double rho);
