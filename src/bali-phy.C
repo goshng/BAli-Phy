@@ -158,6 +158,7 @@ namespace mpi = boost::mpi;
 #include "version.H"
 #include "setup-mcmc.H"
 #include "2way.H"
+#include "sample.H"
 
 namespace fs = boost::filesystem;
 
