@@ -781,7 +781,7 @@ data_partition::data_partition(const string& n, const alignment& a,const Sequenc
    MC(t,SM),
    LC(t,SModel()),
    branch_HMMs(t.n_branches()),
-   branch_PTMs(t.n_branches(),TIM.get_branch_Transducer(1)),
+   branch_PTMs(t.n_branches(),TIModel_->get_branch_Transducer(1)),
    branch_HMM_type(t.n_branches(),0),
    beta(2, 1.0)
 {
