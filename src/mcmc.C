@@ -1136,7 +1136,7 @@ void mcmc_log(int iterations, int subsample, Parameters& P,
 	  {
 	    (*files[5+i])<<endl;
 	    const alignment& A = *P[i].A;
-	    ublas::matrix<int>& type_note = A.note(2);
+	    ublas::matrix<int>& type_note = A.note(1);
 	    for(int c=0;c<A.length();c++)
 	      if (type_note(c,0) == 0)
 		(*files[5+i])<<"S";
@@ -1183,7 +1183,7 @@ void mcmc_log(int iterations, int subsample, Parameters& P,
 	}
 	if (P[i].has_TIModel()) {
 	  alignment& A = *P[i].A;
-	  ublas::matrix<int>& type_note = A.note(2);
+	  ublas::matrix<int>& type_note = A.note(1);
 	  int count_s=0;
 	  for(int c=0;c<A.length();c++)
 	    if (type_note(c,0) == 0)
