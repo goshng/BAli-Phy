@@ -164,7 +164,7 @@ indel::PairHMM heat(indel::PairHMM H, double beta)
 
 void data_partition::recalc_imodel() 
 {
-  if (not variable_alignment()) return;
+  if (not variable_alignment() or not IModel_) return;
 
   cached_alignment_prior.invalidate();
 
@@ -233,7 +233,7 @@ void data_partition::setlength_no_invalidate_LC(int b, double l)
 
   MC.setlength(b,l,*T,*SModel_); 
 
-  if (variable_alignment())
+  if (variable_alignment() and IModel_)
   {
     // use the length, unless we are unaligned
     double t = T->branch(b).length();
