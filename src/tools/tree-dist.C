@@ -19,11 +19,11 @@ along with BAli-Phy; see the file COPYING.  If not see
 
 #include <fstream>
 #include "tree-dist.H"
+#include "io.H"
 
 using std::vector;
 using std::valarray;
 
-using std::ifstream;
 using std::string;
 using std::endl;
 using std::cerr;
@@ -140,7 +140,7 @@ namespace trees_format
   }
 
   Newick::Newick(const std::string& filename)
-    :file(new ifstream(filename.c_str()))
+    :file(new checked_ifstream(filename,"Newick tree file"))
   {
     initialize();
   }
@@ -393,7 +393,7 @@ namespace trees_format
   }
 
   NEXUS::NEXUS(const std::string& filename)
-    :file(new ifstream(filename.c_str())),translate(false)
+    :file(new checked_ifstream(filename,"NEXUS tree file")),translate(false)
   {
     initialize();
   }
@@ -438,7 +438,7 @@ namespace trees_format
 
   Newick_or_NEXUS::Newick_or_NEXUS(const string& filename)
   {
-    std::ifstream file(filename.c_str());
+    checked_ifstream file(filename,"tree file");
 
     if (file.peek() == '#')
       tfr = shared_ptr<reader_t>(new NEXUS(filename));
@@ -776,9 +776,7 @@ int tree_sample::load_file(istream& file,int skip,int subsample,int max,const ve
 
 int tree_sample::load_file(const string& filename,int skip,int subsample,int max,const vector<string>& prune)
 {
-  ifstream file(filename.c_str());
-  if (not file)
-    throw myexception()<<"Couldn't open file "<<filename;
+  checked_ifstream file(filename,"tree samples file");
   
   int count = load_file(file,skip,subsample,max,prune);
   file.close();

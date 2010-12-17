@@ -4,7 +4,7 @@
 #include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
 
-#include "util.H"
+#include "io.H"
 #include "stats-table.H"
 #include "myexception.H"
 #include "owned-ptr.H"
@@ -74,7 +74,7 @@ int main(int argc,char* argv[])
     vector<boost::shared_ptr<ifstream> > files(filenames.size());
     for(int i=0;i<filenames.size();i++)
     {
-      files[i] = boost::shared_ptr<ifstream>(new ifstream(filenames[i].c_str()));
+      files[i] = boost::shared_ptr<ifstream>(new checked_ifstream(filenames[i],"statistics file"));
 
       if (not *files[i])
 	throw myexception()<<"Can't open file '"<<filenames[i]<<"'";

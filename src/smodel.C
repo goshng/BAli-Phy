@@ -28,6 +28,7 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include <gsl/gsl_sf.h>
 #include "logsum.H"
 #include "probability.H"
+#include "io.H"
 
 using std::vector;
 using std::valarray;
@@ -914,10 +915,7 @@ namespace substitution {
   {
     name_ = string("Empirical[") + get_basename(filename) + "]";
 
-    std::ifstream ifile(filename.c_str());
-
-    if (not ifile)
-      throw myexception(string("Couldn't open file '")+filename+"'");
+    checked_ifstream ifile(filename, "empirical rate matrix file");
 
     load_file(ifile);
 
@@ -1554,7 +1552,7 @@ namespace substitution {
 
   void CAT_FixedFrequencyModel::load_file(const string& filename)
   {
-    std::ifstream file(filename.c_str());
+    checked_ifstream file(filename,"CAT fixed frequency model file");
 
     if (not file)
       throw myexception(string("Couldn't open file '")+filename+"'");
@@ -2209,7 +2207,7 @@ A C D E F G H I K L M N P Q R S T V W Y\n\
     // This will be either 0.0 or 1.0
     double omega3_non_zero = get_parameter_value(5);
 
-    // If its 1.0, then act like ff[2] = 0
+    // If its 0.0, then act like ff[2] = 0
     // This allows us to decrease the dimension of the model, w/o removing
     //   a dimension from the MCMC state.  So, reversible-jump is avoided.
     if (omega3_non_zero < 0.5) 

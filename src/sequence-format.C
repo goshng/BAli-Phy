@@ -20,6 +20,7 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include <fstream>
 #include "sequence-format.H"
 #include "util.H"
+#include "io.H"
 
 using namespace std;
 
@@ -377,9 +378,7 @@ namespace sequence_format {
 
   vector<sequence> load_from_file(loader_t loader,const string& filename) 
   {
-    ifstream file(filename.c_str());
-    if (not file)
-      throw myexception()<<"Couldn't open file '"<<filename<<"'";
+    checked_ifstream file(filename,"alignment file");
     vector<sequence> sequences = loader(file);
     file.close();
     return sequences;

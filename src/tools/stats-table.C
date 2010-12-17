@@ -22,6 +22,7 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include "stats-table.H"
 #include "util.H"
 #include "myexception.H"
+#include "io.H"
 
 using namespace std;
 
@@ -150,9 +151,7 @@ stats_table::stats_table(istream& file, int skip, int subsample, int max)
 
 stats_table::stats_table(const string& filename, int skip, int subsample, int max)
 {
-  ifstream file(filename.c_str());
-  if (not file)
-    throw myexception()<<"Can't open file '"<<filename<<"'";
+  checked_ifstream file(filename,"statistics file");
 
   load_file(file,skip,subsample,max);
   if (log_verbose) cerr<<filename<<": Read in "<<n_rows()<<" lines.\n";
