@@ -25,6 +25,7 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include <vector>
 #include "timer_stack.H"
 #include "alignment-util.H"
+#include "util.H"
 
 #ifdef NDEBUG
 #define IF_DEBUG(x)
@@ -194,8 +195,10 @@ namespace substitution {
   void WeightedFrequencyMatrix(Matrix& F, const MultiModel& MModel) 
   {
     // cache matrix of frequencies
-    const int n_models = F.size1();
-    const int n_states = F.size2();
+    const int n_models = MModel.n_base_models();
+    const int n_states = MModel.n_states();
+
+    F.resize(n_models, n_states);
 
     for(int m=0;m<n_models;m++) {
       double p = MModel.distribution()[m];
@@ -788,9 +791,10 @@ namespace substitution {
     assert(index.size1() == I.branch_index_length(b0));
     assert(I.branch_index_valid(b0));
 
+    /*-------------------- Do the peeling part------------- --------------------*/
     peel_internal_branch(b, index, cache, transition_P, MModel);
 
-    /*-------------------- Do the other_subst collection part -------------b-------*/
+    /*-------------------- Do the other_subst collection part -------------------*/
     if (dynamic_cast<subA_index_internal*>(&I))
     {
       ublas::matrix<int> index_collect = I.get_subA_index_vanishing(b,A,T);
@@ -1575,9 +1579,13 @@ namespace substitution {
     return Pr;
   }
 
+
+
   efloat_t Pr(const data_partition& P,Likelihood_Cache& LC) {
     return Pr(*P.A, *P.subA, P.MC, *P.T, LC, P.SModel());
   }
+
+
 
   efloat_t Pr_from_scratch_leaf(data_partition P)
   {
@@ -1588,6 +1596,8 @@ namespace substitution {
 
     return Pr(*P.A, subA, P.MC, *P.T, LC, P.SModel());
   }
+
+
 
   efloat_t Pr_from_scratch_internal(data_partition P)
   {
@@ -1602,6 +1612,8 @@ namespace substitution {
 
     return Pr(*P.A, subA, P.MC, *P.T, LC, P.SModel());
   }
+
+
 
   efloat_t Pr(const data_partition& P) {
     efloat_t result = Pr(P, P.LC);
@@ -1637,4 +1649,175 @@ namespace substitution {
 
     return result;
   }
+
+  efloat_t combine_likelihoods(const vector<Matrix>& likelihoods)
+  {
+    efloat_t Pr = 1;
+    for(int i=0;i<likelihoods.size();i++)
+      Pr *= element_sum(likelihoods[i]);
+    return Pr;
+  }
+
+
+  vector<Matrix> 
+  get_likelihoods_by_alignment_column(const alignment& A,subA_index_t& I, const MatCache& MC,
+				      const Tree& T,Likelihood_Cache& cache,const MultiModel& MModel)
+  {
+#ifdef DEBUG_INDEXING
+    I.check_footprint(A, T);
+    check_regenerate(I, A, T, cache.root);
+#endif
+
+    // Make sure that all conditional likelihoods have been calculated.
+    IF_DEBUG_S(int n_br =) calculate_caches_for_node(cache.root, A,I,MC,T,cache,MModel);
+#ifdef DEBUG_SUBSTITUTION
+    std::clog<<"Pr: Peeled on "<<n_br<<" branches.\n";
+#endif
+
+    // Compute matrix F(m,s) = Pr(m)*Pr(s|m) = p(m)*freq(m,s) 
+    Matrix F;
+    WeightedFrequencyMatrix(F, MModel);
+
+    // 1. Initialize with values that are true if all data is missing.
+    vector<Matrix> likelihoods(A.length(), F);
+
+    // 2. Record likelihoods for disappearing columns
+    vector<const_branchview> branches = branches_toward_node(T, cache.root);
+
+    IF_DEBUG_S(efloat_t other_subst1 = 1);
+
+    for(int i=0;i<branches.size();i++)
+    {
+      int b = branches[i];
+
+      // Get previous branches
+      vector<int> prev;
+      for(const_in_edges_iterator j = branches[i].branches_before();j;j++)
+	prev.push_back(*j);
+
+      // Ignore leaf branches, since they columns don't disappear on leaf  branches.
+      if (prev.size() == 0) continue;
+
+      // Find the list of columns c where...
+      for(int column=0;column<I.size1()-1;column++)
+      {
+	//  (a) this branch (e.g. b) has no index
+	if (I(column+1,b) != alphabet::gap) continue;
+	
+	//  (b) at least one prev branch 'branch' has an index 'index'.
+	for(int j=0;j<prev.size();j++)
+	{
+	  int branch = prev[j];
+	  int index = I(column+1, branch);
+
+	  if (index == alphabet::gap) continue;
+
+	  element_prod_modify(likelihoods[column],cache(index,branch));
+
+	  IF_DEBUG_S(other_subst1 *= element_sum(likelihoods[column]));
+	  // We should never get here with subA_index_leaf.
+	}
+      }
+    }
+
+    // 3. Record likelihoods for columns that survive to the root.
+
+    vector<int> root_branches;
+    for(const_in_edges_iterator i = T[cache.root].branches_in();i;i++)
+      root_branches.push_back(*i);
+
+    for(int column=0;column<I.size1()-1;column++)
+      for(int j=0;j<root_branches.size();j++)
+      {
+	int branch = root_branches[j];
+	int index = I(column+1,branch);
+
+	if (index == alphabet::gap) continue;
+
+	element_prod_modify(likelihoods[column],cache(index,branch));
+    }
+
+    // Is there some way of iterating over matrices cache(index,branch) where EITHER
+    // this (index,branch) goes away OR this branch.target() == cache.root ?
+#ifdef DEBUG_SUBSTITUTION
+    efloat_t other_subst2 = 1;
+    for(int i=0;i<root_branches.size();i++)
+    {
+      assert(cache.up_to_date(root_branches[i]));
+      efloat_t L1 = cache[root_branches[i]].other_subst;
+      other_subst2 *= L1;
+      efloat_t L2 = other_subst3[root_branches[i]];
+      assert(std::abs(log(L2) - log(L1)) < 1.0e-9);
+    }
+
+    assert(std::abs(log(other_subst1) - log(other_subst2)) < 1.0e-9);
+#endif
+
+    return likelihoods;
+  }
+
+
+
+  vector<Matrix> get_likelihoods_by_alignment_column(const data_partition& P)
+  {
+    vector<Matrix> likelihoods = get_likelihoods_by_alignment_column(*P.A, *P.subA, P.MC, *P.T, P.LC, P.SModel());
+
+#ifdef DEBUG_SUBSTITUTION
+    efloat_t L1 = combine_likelihoods(likelihoods);
+    efloat_t L2 = Pr_from_scratch_leaf(P);
+    if (P.variable_alignment()) {
+      efloat_t L3 = Pr_from_scratch_internal(P);
+      assert(std::abs(log(L3) - log(L2)) < 1.0e-9);
+    }
+
+    assert(std::abs(log(L1) - log(L2)) < 1.0e-9);
+#endif
+    
+    return likelihoods;
+  }
+  
+
+
+  vector< vector<double> > get_model_likelihoods_by_alignment_column(const data_partition& P)
+  {
+    vector< vector<double> > model_likelihoods;
+    
+    vector<Matrix> likelihoods = get_likelihoods_by_alignment_column(P);
+    
+    for(int i=0; i<likelihoods.size(); i++)
+    {
+      int n_models = likelihoods[i].size1();
+      int n_states = likelihoods[i].size2();
+      
+      vector<double> v(n_models,0);
+      for(int m=0;m<n_models;m++)
+      {
+	double d = 0;
+	for(int s=0;s<n_states;s++)
+	  d += likelihoods[i](m,s);
+	v[m] = d;
+      }
+      model_likelihoods.push_back(v);
+    }
+
+    return model_likelihoods;
+  }
+
+  vector< vector<double> > get_model_probabilities_by_alignment_column(const data_partition& P)
+  {
+    vector< vector<double> > probabilities = get_model_likelihoods_by_alignment_column(P);
+    
+    for(int i=0; i<probabilities.size(); i++)
+    {
+      double total = ::sum(probabilities[i]);
+
+      int n_models = probabilities[i].size();
+
+      for(int m=0;m<n_models;m++)
+	probabilities[i][m] /= total;
+    }
+
+    return probabilities;
+  }
+
 }

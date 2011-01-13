@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2005 Benjamin Redelings
+   Copyright (C) 2005,2010-2011 Benjamin Redelings
 
 This file is part of BAli-Phy.
 
@@ -33,11 +33,53 @@ along with BAli-Phy; see the file COPYING.  If not see
  * in the sub-alignment.   We need persistent names in order to cache
  * conditional likelihoods at columns in the sub-alignment,
  * specifically in order to cache across internal-node resampling.
+ *
+ * These indices are used when performing the Felsenstein peeling
+ * algorithm for each branch b.  When combining the conditional
+ * likelihoods (CLs) for branches (b1,b2)->b0 to produce the CLs
+ * for branch b0, each alignment column leads to a triplet (i,j,k).
+ * This triplet specifies that CL i for branch b1 should be combined
+ * with CL[j] for branch b2, to produce CL k for branch b0.  The
+ * indices i, j, and k can be -1, indicating that no CL for that branch
+ * corresponds to this column.  If i or j is -1, then there are only
+ * gaps behind that branch.  If k is -1 (which can only occur in
+ * subA_index_internal) then the likelihood for the column is evaluated
+ * immediately and is added to the total of already evaluated likelihoods
+ * behind branch b0.
+ *
+ * 1. For both naming schemes, the index for a branch pointing away from
+ * a leaf node is just the index into the sequence at that leaf.  
+ *
+ * 2. The index for branches pointing away from an internal node merges
+ * the indices from the two branches behind it. The way of doing this is
+ * specific to the naming scheme.  See *::update_one_branch( ).
+ *
+ * 3. Currently the indices are stored in a L*B matrix, where B is the
+ * number of DIRECTED branches (e.g. 2*number of undirected branches) and
+ * L is the alignment length. If I(c,b) = i, then the column for LC index i
+ * on branch b is c.  If I(c,b) = -1, then this column is not indexed for 
+ * branch b.
+ * - The current method is wasteful when most of the I(c,b)'s == -1.
+ * - So why do we do it this way?  When do we need the column information?
+ *   + We do not need it in get_column_likelihoods( ): there we are just reordering
+ *     sub-columns.
+ *   + We do it this way only to indicate which subA indices are in the same column.
+ *   + Could we instead use a DAG?
+ *     - Well, we would need to be able to *partially* compute the DAG behind a directed branch b
+ *     - We would also need to be able to generate the DAG for the entire alignment and then
+ *       do a topo-sort in order to print the alignment. 
+ *     - We could then CACHE the column information on the DAG nodes, if we were trying to match a 
+ *       specific linear order.
+ *     - We would then still have to handle ordering the columns in/for get_column_likelihoods( )
+ *
+ * 4. Note that even for the indexing scheme subA_index_leaf (in which all
+ * columns correspond to CL index at the root of the tree) the ORDER
+ * of these CL indices may differ from the order of columns in the alignment.
  */
 
-/* Naming Scheme #1
+/* Naming Scheme #1 (subA_index_leaf)
  *
- * Our naming scheme for sub-alignment columns satisfies two
+ * The first naming scheme for sub-alignment columns satisfies two
  * important properties: 
  * a) ordering depends only on pairwise alignments behind b and the
  *    topology of the subtree behind b
@@ -61,6 +103,49 @@ along with BAli-Phy; see the file COPYING.  If not see
  * which include this sub-alignment. 
  */
 
+/* Naming Scheme #2 (subA_index_internal)
+ *
+ * In this naming scheme, we index a column c behind a directed branch
+ * b whenever the alignment matrix has a non-gap in the cell A(c, b.source()).
+ * Therefore, this naming scheme requires the alignment to contain homology
+ * information for internal node sequences, since the node b.source() will
+ * often be internal.
+ *
+ * In this naming scheme, when we process two branches b1,b2 that point to
+ * a branch b0, it sometimes occurs that a column that is present in the 
+ * indices for b1 and b2 is NOT present in the index for b0.  In this case
+ * we calculate the likelihood for the column when processing branch b0, 
+ * before we get to the root.
+ *
+ * This approach has two main benefits.  First, if saves computation time.
+ * This is because when a column contains only a single character, we do not
+ * need to peel it all the way up to the root.  Instead, after peeling one
+ * branch, we calculate the likelihood and propagate these summed
+ * log-likelihoods up to the root, which is much cheaper.
+ * 
+ * Second, we do not need to allocate memory for a the conditional likelihood
+ * on all the branches up to the root.  This can result in a huge decrease in
+ * memory use when analyzing a large number of taxa, because insertions in
+ * a single sequence now incur a constant memory cost.  Previously, an insertion
+ * in a single sequence would incur a cost of storing 2*B conditional likelihood
+ * matrices if the tree had B branches.  You can visualize this by considering
+ * that in a matrix with many branches, we no longer incur a memory cost for
+ * alignment cells that contain a gap, but only for cells that contain a character.
+ * This, the memory cost of unaligning two sequences is drastically decreased.
+ *
+ * On the downside, this method of indexing requires recalculating the indexes
+ * (and thus the conditional likelihoods) for a branch b if the alignment changes
+ * on any branch behind b.  This is true even if the alignment of leaf sequences
+ * is unchanged.  Therefore, conditional likelihoods must be recalculated after 
+ * performing an NNI move, because a column containing internal node characters
+ * but not leaf characters MAY be added or removed by the alignment resampling.
+ * In theory this could make subA_index_internal slower than subA_index_leaf, but
+ * this cost does not seem to be too high in practice.
+ *
+ * Question: is subA_index_internal affected by the reordering of unordered
+ *  columns in the alignment, like subA_index_leaf is?
+ * 
+ */
 
 struct subA_index_t: public ublas::matrix<int>
 {
