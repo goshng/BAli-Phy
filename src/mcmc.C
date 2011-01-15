@@ -43,6 +43,7 @@ along with BAli-Phy; see the file COPYING.  If not see
 #include "likelihood.H"
 #include "substitution.H"
 #include "setup.H"           // for standardize
+#include "choose.H"
 
 #include "monitor.H"
 #include "proposals.H"
@@ -1166,7 +1167,32 @@ void mcmc_log(int iterations, int subsample, Parameters& P,
     {
       (*files[5+i])<<"iterations = "<<iterations<<"\n\n";
       if (not iterations or P[i].variable_alignment())
-	(*files[5+i])<<standardize(*P[i].A, *P.T)<<"\n";
+      {
+        (*files[5+i])<<standardize(*P[i].A, *P.T)<<"\n";
+
+        substitution::Pr(P[i]);
+        vector<vector<double> > model_pr = substitution::get_model_probabilities_by_alignment_column(P[i]);
+
+        if (iterations == 0)
+        {
+          (*files[5+i])<<"#Probability of Positive Selection:";
+          P[i].A->printHeaderProbabilityPositiveSelection(*files[5+i]);
+        }
+
+        (*files[5+i])<<"#Probability of Positive Selection:";
+        (*files[5+i])<<iterations;
+        P[i].A->printProbabilityPositiveSelection(*files[5+i], model_pr);
+        (*files[5+i])<<"\n";
+
+        // For each codon site of a codon sequence 
+        (*files[5+i])<<"#Column Probability:";
+        for(int j=0;j<model_pr.size();j++)
+        {
+          (*files[5+i]) << "\t[" << j << "]";
+          (*files[5+i])<< "\t" << model_pr[j][2];
+        }
+        (*files[5+i])<<"\n";
+      }
     }
   }
 

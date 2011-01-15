@@ -293,6 +293,63 @@ void alignment::print(std::ostream& file) const{
   }
 }
 
+/// printProbabilityPositiveSelection takes two arguements: file and model_pr.
+/// Only the 3rd element of model_pr[c] is printed out where c is the column
+/// index. I assume that characters are either a gap or not.
+void alignment::printProbabilityPositiveSelection(std::ostream& file, 
+                                                  vector<vector<double> >& model_pr) const
+
+{
+  int n = n_sequences();
+  n = (n + 2) / 2;
+  int c = length();
+  for (int i = 0; i < n; i++)
+  {
+    int m = 0; // Length of i-th sequence 
+    for (int j = 0; j < c; j++)
+    {
+      if (array (j,i) == alphabet::gap)
+      {
+        // No code.
+      }
+      else
+      {
+        m++;
+        file << "\t" << model_pr[j][2];
+      }
+    }
+  } 
+}
+
+void alignment::printHeaderProbabilityPositiveSelection(std::ostream& file) const
+
+{
+  file << "gen";
+  int n = n_sequences();
+  n = (n + 2) / 2;
+  int c = length();
+  for (int i = 0; i < n; i++)
+  {
+    int m = 0; // Length of i-th sequence 
+    for (int j = 0; j < c; j++)
+    {
+      if (array (j,i) == alphabet::gap)
+      {
+        // No code.
+      }
+      else
+      {
+        m++;
+      }
+    }
+    for (int j = 0; j < m; j++)
+    {
+      file << "\t" << i << "-" << j;
+    }
+  } 
+  file << "\n";
+}
+
 vector<sequence> alignment::convert_to_sequences() const 
 {
 

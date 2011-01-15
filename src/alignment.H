@@ -61,6 +61,11 @@ public:
   /// Unsafe - Make a copy of the alignment without preserving the homology array
   friend alignment blank_copy(const alignment&,int length);
 
+  /// Prints probability of positive selection to C1.P1.fastas.
+  void printProbabilityPositiveSelection(std::ostream& file, 
+                                         std::vector<std::vector<double> >& model_pr) const;
+  void printHeaderProbabilityPositiveSelection(std::ostream& file) const; 
+
   /// Returns the number of notes
   int n_notes() const {return notes.size();}
 
